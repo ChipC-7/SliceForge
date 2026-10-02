@@ -1,0 +1,14 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# 本地会话 / IDE
+.comate/
+.claude/
+.vscode
+.idea/
+.DS_Store
+
+# Node / 前端（sliceforge-tauri/ 内已有更细的规则，这里兜底）
+node_modules/
+dist/
