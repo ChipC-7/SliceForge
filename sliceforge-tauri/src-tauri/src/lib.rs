@@ -10,7 +10,7 @@ use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
 use std::sync::Mutex;
 
-use tauri::{AppHandle, Emitter, State};
+use tauri::{AppHandle, Emitter, Manager, State};
 
 /// 当前子进程句柄；None 表示空闲。同一时间只允许一个任务（与旧版界面一致）。
 struct TaskState(Mutex<Option<Child>>);
@@ -18,17 +18,29 @@ struct TaskState(Mutex<Option<Child>>);
 /// 定位 backend.py（core.py 与它同目录，import 依赖这点）。
 ///
 /// 查找顺序：
-///   1. 环境变量 SLICEFORGE_BACKEND（显式指定）；
-///   2. 开发环境：src-tauri 的上一级目录（CARGO_MANIFEST_DIR 编译期已知）。
-/// 打包分发时再改为随包携带，这里先按本地开发约定来。
-fn backend_path() -> Result<PathBuf, String> {
+///   1. 环境变量 SLICEFORGE_BACKEND（显式指定，调试 / 特殊部署用）；
+///   2. 应用资源目录 —— 打包时 backend.py / core.py 作为 bundle.resources
+///      随应用分发（tauri.conf.json 的 resources 配置）；
+///   3. 开发环境：src-tauri 上两级（CARGO_MANIFEST_DIR 编译期已知）。
+fn backend_path(app: &AppHandle) -> Result<PathBuf, String> {
     if let Ok(p) = std::env::var("SLICEFORGE_BACKEND") {
         let p = PathBuf::from(p);
         if p.is_file() {
             return Ok(p);
         }
-        return Err(format!("SLICEFORGE_BACKEND 指向的文件不存在：{}", p.display()));
+        return Err(format!(
+            "SLICEFORGE_BACKEND 指向的文件不存在：{}",
+            p.display()
+        ));
     }
+
+    if let Ok(dir) = app.path().resource_dir() {
+        let p = dir.join("backend.py");
+        if p.is_file() {
+            return Ok(p);
+        }
+    }
+
     let p = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .parent() // sliceforge-tauri/
         .and_then(|p| p.parent()) // 项目根（backend.py 与 core.py 所在）
@@ -37,7 +49,7 @@ fn backend_path() -> Result<PathBuf, String> {
     if p.is_file() {
         return Ok(p);
     }
-    Err(format!("找不到 backend.py（尝试过 {}）", p.display()))
+    Err("找不到 backend.py（应用资源目录与开发目录都没有）".into())
 }
 
 #[tauri::command]
@@ -49,7 +61,7 @@ fn start_task(
     chunk: Option<String>,
     overwrite: bool,
 ) -> Result<(), String> {
-    let backend = backend_path()?;
+    let backend = backend_path(&app)?;
 
     let mut guard = state.0.lock().map_err(|e| e.to_string())?;
     if let Some(child) = guard.as_mut() {
@@ -124,8 +136,8 @@ fn cancel_task(state: State<'_, TaskState>) -> Result<(), String> {
 
 /// 一次性预读：plan（切割页）/ inspect（合并页），同步返回单行 JSON。
 #[tauri::command]
-fn query(kind: String, path: String) -> Result<serde_json::Value, String> {
-    let backend = backend_path()?;
+fn query(app: AppHandle, kind: String, path: String) -> Result<serde_json::Value, String> {
+    let backend = backend_path(&app)?;
     let python =
         std::env::var("SLICEFORGE_PYTHON").unwrap_or_else(|_| "python3".to_string());
     let mut cmd = Command::new(python);

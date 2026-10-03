@@ -18,13 +18,17 @@ pnpm tauri dev
 Python 侧只用标准库，系统 `python3` 即可；如需指定解释器或脚本位置：
 
 - `SLICEFORGE_PYTHON`：Python 解释器路径（默认 `python3`）
-- `SLICEFORGE_BACKEND`：backend.py 路径（默认取 `src-tauri/../backend.py`）
+- `SLICEFORGE_BACKEND`：backend.py 路径（默认依次找：应用资源目录 →
+  `src-tauri/../../backend.py`，即项目根）
 
 ## 发布构建
 
 ```bash
-pnpm tauri build      # 产物约 6 MB，前端已内嵌
+pnpm tauri build      # 单文件二进制，约 6 MB，前端已内嵌
 ```
+
+应用图标源文件是本目录的 `app-icon.png`（1024×1024），更换图标后运行
+`pnpm tauri icon app-icon.png` 重新生成整套 `src-tauri/icons/`。
 
 注意：二进制运行时仍需 `backend.py` / `core.py` 与一个 `python3`
 （按上面的查找规则定位）；要做成完全自包含的分发包需另行打包，暂未做。
@@ -40,4 +44,21 @@ test_backend.py       backend.py 协议测试
 ```
 
 跑全部测试（项目根目录）：`python -m unittest discover -p "test_*.py"`
+
+## CI 打包（多平台）
+
+`.github/workflows/build.yml`（仓库根）在推送 `v*` 标签时用
+[tauri-action](https://github.com/tauri-apps/tauri-action) 构建四份产物并创建
+**草稿 Release**，也可在 Actions 页面手动触发（产物以 workflow artifact 提供）：
+
+| 平台（runner） | 产物 |
+|---|---|
+| Linux（ubuntu-22.04，兼容面更大） | `.deb`、`.AppImage` |
+| Windows | `.msi`、`.exe`（NSIS） |
+| macOS（Intel） | `.dmg` |
+| macOS（Apple Silicon） | `.dmg` |
+
+发版流程：改好代码 → `git tag v1.0.x && git push origin v1.0.x` → 等 Actions 跑完 →
+到 Releases 里把草稿发布。注意产物运行时仍需系统 `python3`（Linux 一般自带；
+Windows / macOS 用户需自行安装）。
 

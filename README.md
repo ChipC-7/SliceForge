@@ -45,11 +45,35 @@ Python 侧只用标准库，系统 `python3` 即可；可用环境变量覆盖�
 ## 发布构建
 
 ```bash
-pnpm tauri build      # 单文件二进制，约 6 MB（前端已内嵌）
+pnpm tauri build      # 单文件二进制，约 6 MB，前端已内嵌
 ```
 
 > 注意：二进制运行时仍需 `backend.py` / `core.py` 与一个 `python3`（按上面的查找规则
 > 定位）。要做成完全自包含的分发包，需把逻辑移植进 Rust 或打包 Python，暂未做。
+
+## CI 打包
+
+推送 `v*` 标签（如 `git tag v1.0.0 && git push origin v1.0.0`）会触发
+`.github/workflows/build.yml`：在 ubuntu-22.04 / windows / macOS(Intel+Apple Silicon)
+上构建安装包（deb / AppImage / msi / nsis exe / dmg），并自动创建**草稿 Release**；
+也可在 Actions 页面手动触发（产物以 artifact 提供）。`backend.py` 与 `core.py`
+已作为资源随包分发（`tauri.conf.json` 的 `bundle.resources`）。
+
+## CI 打包（多平台）
+
+`.github/workflows/build.yml` 在推送 `v*` 标签时自动构建四份产物并创建草稿 Release：
+
+| 平台 | 产物 |
+|---|---|
+| Linux (ubuntu-22.04 构建) | `.deb`、`.AppImage` |
+| Windows | `.msi`、`.exe`（NSIS） |
+| macOS | Intel (x86_64) 与 Apple Silicon (aarch64) 的 `.dmg` |
+
+`backend.py` / `core.py` 已通过 `bundle.resources` 随包分发，应用按
+「环境变量 → 应用资源目录 → 开发目录」的顺序定位它们。
+
+**运行时依赖**：Linux 一般自带 `python3`，开箱即用；Windows / macOS 需要用户
+自行安装 Python 3.8+（后续可改为 PyInstaller 打包后端，实现零依赖分发）。
 
 ## 测试
 
