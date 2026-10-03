@@ -1,4 +1,4 @@
-# 多平台打包：推送 v* 标签 → 构建各平台安装包并创建草稿 Release
+# 多平台打包：推送 v* 标签 → 构建各平台安装包并发布 Release
 # 也可在 Actions 页面手动触发（此时产物以上传的 workflow artifact 形式提供）。
 #
 # 说明：产物运行时仍需系统装有 python3（backend.py 以子进程方式运行），
@@ -75,7 +75,7 @@ jobs:
           tagName: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
           releaseName: ${{ github.ref_type == 'tag' && format('SliceForge {0}', github.ref_name) || '' }}
           releaseBody: '请在下方 Assets 选择对应平台安装包。运行依赖系统 python3（backend.py 以子进程方式执行）。'
-          releaseDraft: true
+          releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
 
