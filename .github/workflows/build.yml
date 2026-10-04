@@ -75,16 +75,17 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          shopt -s nullglob
           mkdir -p dist-bundles
           base="sliceforge-tauri/src-tauri/target/release/bundle"
           for d in deb rpm appimage nsis dmg; do
             for f in "$base/$d"/*; do
-              [ -e "$f" ] && cp "$f" dist-bundles/
+              cp "$f" dist-bundles/
             done
           done
           # macOS 矩阵带了 --target <triple>，产物在 target/<triple>/release 下
           for f in sliceforge-tauri/src-tauri/target/*-apple-darwin/release/bundle/dmg/*.dmg; do
-            [ -e "$f" ] && cp "$f" dist-bundles/
+            cp "$f" dist-bundles/
           done
           ls -lh dist-bundles/
 
