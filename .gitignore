@@ -12,3 +12,6 @@ __pycache__/
 # Node / 前端（sliceforge-tauri/ 内已有更细的规则，这里兜底）
 node_modules/
 dist/
+
+# CI/本地归集安装包的临时目录
+dist-bundles/

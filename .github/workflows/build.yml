@@ -78,14 +78,15 @@ jobs:
           shopt -s nullglob
           mkdir -p dist-bundles
           base="sliceforge-tauri/src-tauri/target/release/bundle"
+          # 注意：deb/rpm 目录下还各有一个同名暂存子目录，必须只复制普通文件
           for d in deb rpm appimage nsis dmg; do
             for f in "$base/$d"/*; do
-              cp "$f" dist-bundles/
+              if [ -f "$f" ]; then cp "$f" dist-bundles/; fi
             done
           done
           # macOS 矩阵带了 --target <triple>，产物在 target/<triple>/release 下
           for f in sliceforge-tauri/src-tauri/target/*-apple-darwin/release/bundle/dmg/*.dmg; do
-            cp "$f" dist-bundles/
+            if [ -f "$f" ]; then cp "$f" dist-bundles/; fi
           done
           ls -lh dist-bundles/
 
