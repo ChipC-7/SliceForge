@@ -23,12 +23,16 @@ jobs:
         include:
           - platform: ubuntu-22.04 # 用较老的 LTS 构建，glibc 兼容面更大
             args: ""
+            key: linux
           - platform: windows-latest
             args: ""
+            key: win
           - platform: macos-latest
             args: --target x86_64-apple-darwin
+            key: mac-x64
           - platform: macos-latest
             args: --target aarch64-apple-darwin
+            key: mac-arm64
 
     runs-on: ${{ matrix.platform }}
     steps:
@@ -71,23 +75,31 @@ jobs:
         run: pnpm tauri build ${{ matrix.args }}
         working-directory: sliceforge-tauri
 
-      - name: 归集产物到单层目录（保证 artifact 内无嵌套路径）
+      - name: 归集产物（ASCII 占位名，避免 artifact 清洗非 ASCII 文件名）
         shell: bash
         run: |
           set -euo pipefail
           shopt -s nullglob
           mkdir -p dist-bundles
+          key='${{ matrix.key }}'
           base="sliceforge-tauri/src-tauri/target/release/bundle"
-          # 注意：deb/rpm 目录下还各有一个同名暂存子目录，必须只复制普通文件
-          for d in deb rpm appimage nsis dmg; do
-            for f in "$base/$d"/*; do
-              if [ -f "$f" ]; then cp "$f" dist-bundles/; fi
+          if [ "$key" = linux ]; then
+            # Linux 最终就是英文包名（deb/rpm 包名规范要求），原名复制即可。
+            # 注意：deb/rpm 目录下还各有一个同名暂存子目录，必须只复制普通文件。
+            for d in deb rpm appimage; do
+              for f in "$base/$d"/*; do
+                if [ -f "$f" ]; then cp "$f" dist-bundles/; fi
+              done
             done
-          done
-          # macOS 矩阵带了 --target <triple>，产物在 target/<triple>/release 下
-          for f in sliceforge-tauri/src-tauri/target/*-apple-darwin/release/bundle/dmg/*.dmg; do
-            if [ -f "$f" ]; then cp "$f" dist-bundles/; fi
-          done
+          elif [ "$key" = win ]; then
+            for f in "$base"/nsis/*.exe; do
+              if [ -f "$f" ]; then cp "$f" dist-bundles/win-x64-setup.exe; fi
+            done
+          elif [ "$key" = mac-x64 ]; then
+            cp sliceforge-tauri/src-tauri/target/x86_64-apple-darwin/release/bundle/dmg/*.dmg dist-bundles/mac-x64.dmg
+          elif [ "$key" = mac-arm64 ]; then
+            cp sliceforge-tauri/src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg dist-bundles/mac-arm64.dmg
+          fi
           ls -lh dist-bundles/
 
       - name: 上传构建产物
@@ -104,12 +116,22 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: 下载全部平台产物（保留中文文件名）
+      - name: 下载全部平台产物（ASCII 占位名）
         uses: actions/download-artifact@v4
         with:
           pattern: bundles-*
           path: artifacts
           merge-multiple: true
+
+      - name: 还原 Windows/macOS 中文安装包名
+        shell: bash
+        run: |
+          set -euo pipefail
+          v="${GITHUB_REF_NAME#v}"
+          cd artifacts
+          if [ -f win-x64-setup.exe ]; then mv win-x64-setup.exe "切片工坊_${v}_x64-setup.exe"; fi
+          if [ -f mac-x64.dmg ]; then mv mac-x64.dmg "切片工坊_${v}_x64.dmg"; fi
+          if [ -f mac-arm64.dmg ]; then mv mac-arm64.dmg "切片工坊_${v}_aarch64.dmg"; fi
 
       - name: 核对产物清单
         run: ls -lh artifacts/
