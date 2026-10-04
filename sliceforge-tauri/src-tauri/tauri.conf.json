@@ -1,8 +1,9 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "SliceForge",
-  "version": "1.0.0",
+  "productName": "切片工坊",
+  "version": "1.0.1",
   "identifier": "com.sliceforge.app",
+  "mainBinaryName": "sliceforge",
   "build": {
     "beforeDevCommand": "pnpm dev",
     "devUrl": "http://localhost:1420",
@@ -12,7 +13,7 @@
   "app": {
     "windows": [
       {
-        "title": "SliceForge · 文件切片工坊",
+        "title": "切片工坊",
         "width": 1020,
         "height": 780,
         "minWidth": 900,
