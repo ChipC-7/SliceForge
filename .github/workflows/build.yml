@@ -71,21 +71,29 @@ jobs:
         run: pnpm tauri build ${{ matrix.args }}
         working-directory: sliceforge-tauri
 
+      - name: 归集产物到单层目录（保证 artifact 内无嵌套路径）
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist-bundles
+          base="sliceforge-tauri/src-tauri/target/release/bundle"
+          for d in deb rpm appimage nsis dmg; do
+            for f in "$base/$d"/*; do
+              [ -e "$f" ] && cp "$f" dist-bundles/
+            done
+          done
+          # macOS 矩阵带了 --target <triple>，产物在 target/<triple>/release 下
+          for f in sliceforge-tauri/src-tauri/target/*-apple-darwin/release/bundle/dmg/*.dmg; do
+            [ -e "$f" ] && cp "$f" dist-bundles/
+          done
+          ls -lh dist-bundles/
+
       - name: 上传构建产物
         uses: actions/upload-artifact@v4
         with:
           name: bundles-${{ strategy.job-index }}
-          # macOS 矩阵带了 --target <triple>，其产物落在 target/<triple>/release 下，
-          # 因此除默认 target/release 路径外，再补一条 *-apple-darwin 的匹配。
-          # 各平台只会命中自己那几条，未命中的 glob 由 if-no-files-found 忽略。
-          if-no-files-found: ignore
-          path: |
-            sliceforge-tauri/src-tauri/target/release/bundle/deb/*.deb
-            sliceforge-tauri/src-tauri/target/release/bundle/rpm/*.rpm
-            sliceforge-tauri/src-tauri/target/release/bundle/appimage/*.AppImage
-            sliceforge-tauri/src-tauri/target/release/bundle/nsis/*.exe
-            sliceforge-tauri/src-tauri/target/release/bundle/dmg/*.dmg
-            sliceforge-tauri/src-tauri/target/*-apple-darwin/release/bundle/dmg/*.dmg
+          if-no-files-found: error
+          path: dist-bundles/
 
   publish:
     needs: build
