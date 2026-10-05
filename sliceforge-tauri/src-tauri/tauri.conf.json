@@ -1,9 +1,9 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "切片工坊",
-  "version": "1.0.6",
-  "identifier": "com.sliceforge.app",
-  "mainBinaryName": "sliceforge",
+  "productName": "FragMend",
+  "version": "1.1.0",
+  "identifier": "com.fragmend.app",
+  "mainBinaryName": "fragmend",
   "build": {
     "beforeDevCommand": "pnpm dev",
     "devUrl": "http://localhost:1420",
@@ -13,7 +13,7 @@
   "app": {
     "windows": [
       {
-        "title": "切片工坊",
+        "title": "分合 · FragMend",
         "width": 1020,
         "height": 780,
         "minWidth": 900,

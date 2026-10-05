@@ -11,7 +11,7 @@ import {
 import MergePanel from "./components/MergePanel.vue";
 import SplitPanel from "./components/SplitPanel.vue";
 
-const APP_VERSION = "1.0.0";
+const APP_VERSION = "1.1.0";
 
 const activeTab = ref<"split" | "merge">("split");
 const themeKey = ref(loadSavedTheme());
@@ -46,7 +46,7 @@ onBeforeUnmount(() => media.removeEventListener("change", onMediaChange));
   <div class="app-shell">
     <header class="app-header">
       <div>
-        <h1 class="app-title">切片工坊</h1>
+        <h1 class="app-title">分合</h1>
         <p class="app-subtitle">大文件切割 / SHA-256 校验 / 流式合并还原 · v{{ APP_VERSION }}</p>
       </div>
       <div class="header-spacer"></div>

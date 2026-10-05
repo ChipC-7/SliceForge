@@ -3,9 +3,8 @@
 #
 # 说明：产物运行时仍需系统装有 python3（backend.py 以子进程方式运行），
 #       backend.py / core.py 已作为资源随包分发，无需额外安装。
-# 注意：应用显示名「切片工坊」含非 ASCII 字符，Windows 只打 NSIS（WiX 的
-#       light.exe 不支持非 ASCII 路径），Release 资产不经 tauri-action 上传
-#       （它会把中文资产名清洗为下划线），由独立 publish 任务统一发布。
+# 发布架构：四个平台构建任务各自上传 artifact → publish 任务统一下载并
+#           发布到 Release（应用名 FragMend 为纯 ASCII，无文件名兼容问题）。
 
 name: Build & Release
 
@@ -23,16 +22,12 @@ jobs:
         include:
           - platform: ubuntu-22.04 # 用较老的 LTS 构建，glibc 兼容面更大
             args: ""
-            key: linux
           - platform: windows-latest
             args: ""
-            key: win
           - platform: macos-latest
             args: --target x86_64-apple-darwin
-            key: mac-x64
           - platform: macos-latest
             args: --target aarch64-apple-darwin
-            key: mac-arm64
 
     runs-on: ${{ matrix.platform }}
     steps:
@@ -75,31 +70,23 @@ jobs:
         run: pnpm tauri build ${{ matrix.args }}
         working-directory: sliceforge-tauri
 
-      - name: 归集产物（ASCII 占位名，避免 artifact 清洗非 ASCII 文件名）
+      - name: 归集产物到单层目录
         shell: bash
         run: |
           set -euo pipefail
           shopt -s nullglob
           mkdir -p dist-bundles
-          key='${{ matrix.key }}'
           base="sliceforge-tauri/src-tauri/target/release/bundle"
-          if [ "$key" = linux ]; then
-            # Linux 最终就是英文包名（deb/rpm 包名规范要求），原名复制即可。
-            # 注意：deb/rpm 目录下还各有一个同名暂存子目录，必须只复制普通文件。
-            for d in deb rpm appimage; do
-              for f in "$base/$d"/*; do
-                if [ -f "$f" ]; then cp "$f" dist-bundles/; fi
-              done
+          # 注意：deb/rpm 目录下还各有一个同名暂存子目录，必须只复制普通文件
+          for d in deb rpm appimage nsis msi dmg; do
+            for f in "$base/$d"/*; do
+              if [ -f "$f" ]; then cp "$f" dist-bundles/; fi
             done
-          elif [ "$key" = win ]; then
-            for f in "$base"/nsis/*.exe; do
-              if [ -f "$f" ]; then cp "$f" dist-bundles/win-x64-setup.exe; fi
-            done
-          elif [ "$key" = mac-x64 ]; then
-            cp sliceforge-tauri/src-tauri/target/x86_64-apple-darwin/release/bundle/dmg/*.dmg dist-bundles/mac-x64.dmg
-          elif [ "$key" = mac-arm64 ]; then
-            cp sliceforge-tauri/src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg dist-bundles/mac-arm64.dmg
-          fi
+          done
+          # macOS 矩阵带了 --target <triple>，产物在 target/<triple>/release 下
+          for f in sliceforge-tauri/src-tauri/target/*-apple-darwin/release/bundle/dmg/*.dmg; do
+            if [ -f "$f" ]; then cp "$f" dist-bundles/; fi
+          done
           ls -lh dist-bundles/
 
       - name: 上传构建产物
@@ -116,22 +103,12 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: 下载全部平台产物（ASCII 占位名）
+      - name: 下载全部平台产物
         uses: actions/download-artifact@v4
         with:
           pattern: bundles-*
           path: artifacts
           merge-multiple: true
-
-      - name: 还原 Windows/macOS 中文安装包名
-        shell: bash
-        run: |
-          set -euo pipefail
-          v="${GITHUB_REF_NAME#v}"
-          cd artifacts
-          if [ -f win-x64-setup.exe ]; then mv win-x64-setup.exe "切片工坊_${v}_x64-setup.exe"; fi
-          if [ -f mac-x64.dmg ]; then mv mac-x64.dmg "切片工坊_${v}_x64.dmg"; fi
-          if [ -f mac-arm64.dmg ]; then mv mac-arm64.dmg "切片工坊_${v}_aarch64.dmg"; fi
 
       - name: 核对产物清单
         run: ls -lh artifacts/
@@ -146,8 +123,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          name: SliceForge ${{ github.ref_name }}
-          body: 请在下方 Assets 选择对应平台安装包。运行依赖系统 python3（backend.py 以子进程方式执行）。
+          name: FragMend ${{ github.ref_name }}
+          body: 分合 FragMend —— 大文件切片 / SHA-256 校验 / 流式合并还原。请在下方 Assets 选择对应平台安装包。运行依赖系统 python3（backend.py 以子进程方式执行）。
           prerelease: false
           draft: false
           fail_on_unmatched_files: true
@@ -155,5 +132,6 @@ jobs:
             artifacts/*.deb
             artifacts/*.rpm
             artifacts/*.AppImage
+            artifacts/*.msi
             artifacts/*.exe
             artifacts/*.dmg

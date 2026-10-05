@@ -1,4 +1,4 @@
-// SliceForge · Tauri 后端
+// FragMend（分合）· Tauri 后端
 // ========================
 // 职责只有两件事：
 //   1. 把切片 / 合并任务交给 Python 桥接层（backend.py，NDJSON 协议）执行；

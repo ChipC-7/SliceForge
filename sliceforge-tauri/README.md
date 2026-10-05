@@ -1,4 +1,4 @@
-# SliceForge · 文件切片工坊
+# FragMend · 分合
 
 **Tauri 2 + Vue 3** 桌面应用：把大文件切成若干小切片（便于通过限制单文件
 大小的平台逐个发送），接收方校验 SHA-256 完整性后流式合并还原原文件。
@@ -47,18 +47,18 @@ test_backend.py       backend.py 协议测试
 
 ## CI 打包（多平台）
 
-`.github/workflows/build.yml`（仓库根）在推送 `v*` 标签时用
-[tauri-action](https://github.com/tauri-apps/tauri-action) 构建四份产物并创建
-**草稿 Release**，也可在 Actions 页面手动触发（产物以 workflow artifact 提供）：
+`.github/workflows/build.yml`（仓库根）在推送 `v*` 标签时构建四份产物，
+构建任务各自上传 artifact，由独立的 publish 任务统一发布正式 Release；
+也可在 Actions 页面手动触发（产物以 workflow artifact 提供）：
 
 | 平台（runner） | 产物 |
 |---|---|
-| Linux（ubuntu-22.04，兼容面更大） | `.deb`、`.AppImage` |
+| Linux（ubuntu-22.04，兼容面更大） | `.deb`、`.rpm`、`.AppImage` |
 | Windows | `.msi`、`.exe`（NSIS） |
 | macOS（Intel） | `.dmg` |
 | macOS（Apple Silicon） | `.dmg` |
 
-发版流程：改好代码 → `git tag v1.0.x && git push origin v1.0.x` → 等 Actions 跑完 →
-到 Releases 里把草稿发布。注意产物运行时仍需系统 `python3`（Linux 一般自带；
+发版流程：改好代码 → `git tag v1.1.0 && git push origin v1.1.0` → 等 Actions 跑完，
+Release 自动发布。注意产物运行时仍需系统 `python3`（Linux 一般自带；
 Windows / macOS 用户需自行安装）。
 
